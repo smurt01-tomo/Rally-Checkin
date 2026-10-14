@@ -10336,11 +10336,16 @@ function showRecord(){
   else if(!e.site){
     h += '<form class="row" id="siteForm"><input id="siteNum" type="text" inputmode="numeric" placeholder="Site number" autocomplete="off" aria-label="Site number"><button type="submit">Save site</button></form>';
     if(o.preSite) h += '<button class="ghost" id="usePre" type="button">Use pre-assigned site '+esc(o.preSite)+'</button>';
-  } else h += '<div class="msg ok">Checked in and parked. Nothing more to enter.</div>';
+  } else {
+    const lc = CHK[o.club]||{};
+    h += '<div class="msg ok">Checked in and parked at site '+esc(e.site)+'.'+(lc.prevSite?' Moved from site '+esc(lc.prevSite)+'.':'')+'</div>';
+    h += '<button class="ghost" id="moveBtn" type="button">Move to a different site</button>';
+    h += '<form class="row" id="moveForm" hidden><input id="moveNum" type="text" inputmode="numeric" placeholder="New site number" autocomplete="off" aria-label="New site number"><button type="submit">Save new site</button><button class="ghost" id="moveCancel" type="button">Cancel</button></form>';
+  }
   let tools = '';
   if(canBack) tools += '<button class="ghost" id="back" type="button">Back to results</button>';
   else tools += '<button class="ghost" id="back" type="button">Done</button>';
-  if(e.arrivedAt) tools += '<button class="ghost" id="undoArr" type="button">Undo arrival</button>';
+  if(e.arrivedAt && !e.site) tools += '<button class="ghost" id="undoArr" type="button">Undo arrival</button>';
   if(e.localSite) tools += '<button class="ghost" id="undoSite" type="button">Clear site</button>';
   h += '<div class="row">'+tools+'</div>';
   box.innerHTML = h; box.hidden = false;
@@ -10348,6 +10353,14 @@ function showRecord(){
   const sf = $("siteForm"); if(sf) sf.onsubmit = ev=>{ ev.preventDefault(); const v=$("siteNum").value.trim(); if(v) setChk(current,{site:v}); };
   const up = $("usePre"); if(up) up.onclick = ()=> setChk(current,{site:o.preSite});
   $("back").onclick = ()=>{ const nm = names(BYCLUB[current]), fin = !canBack; current = null; if(fin){ $("q").value = ""; doneMsg(nm); } refresh(); };
+  const mb = $("moveBtn"); if(mb){
+    mb.onclick = ()=>{ mb.hidden = true; $("moveForm").hidden = false; $("moveNum").focus(); };
+    $("moveCancel").onclick = ()=>{ $("moveForm").hidden = true; mb.hidden = false; };
+    $("moveForm").onsubmit = ev=>{ ev.preventDefault(); const v = $("moveNum").value.trim(); if(!v) return;
+      const old = eff(o).site; if(v === old){ $("moveForm").hidden = true; mb.hidden = false; return; }
+      const lc = CHK[o.club]||{};
+      setChk(current,{site:v, prevSite:old, movedAt:new Date().toISOString(), moves:(lc.moves||0)+1}); };
+  }
   const ua = $("undoArr"); if(ua) ua.onclick = ()=> setChk(current,{arrivedAt:null});
   const us = $("undoSite"); if(us) us.onclick = ()=> setChk(current,{site:null});
 }
@@ -10463,13 +10476,13 @@ $("sampleBtn").onclick = ()=>{ sset("rc_list",""); mem.rc_list=null; try{localSt
 function csvCell(v){ v = String(v==null?"":v); return /[",\n\r]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; }
 const p2 = n => String(n).padStart(2,"0");
 function buildExport(){
-  const head = ["Club Number","M1 First Name","M1 Last Name","M2 First Name","M2 Last Name","Date Arrived","Arrival Time","Site#","Tablet","Owner List"];
+  const head = ["Club Number","M1 First Name","M1 Last Name","M2 First Name","M2 Last Name","Date Arrived","Arrival Time","Site#","Tablet","Owner List","Previous Site","Moved At","Move Count"];
   const lines = [head.map(csvCell).join(",")];
   OWNERS.forEach(o=>{
     const l = CHK[o.club]; if(!l) return;
     let d = "", t = "";
     if(l.arrivedAt){ const x = new Date(l.arrivedAt); d = x.getFullYear()+"-"+p2(x.getMonth()+1)+"-"+p2(x.getDate()); t = p2(x.getHours())+":"+p2(x.getMinutes()); }
-    lines.push([o.club,o.m1,o.l1,o.m2,o.l2,d,t,l.site||"",l.tablet||$("tabletName").value.trim(),LABEL].map(csvCell).join(","));
+    lines.push([o.club,o.m1,o.l1,o.m2,o.l2,d,t,l.site||"",l.tablet||$("tabletName").value.trim(),LABEL,l.prevSite||"",l.movedAt?(new Date(l.movedAt).getFullYear()+"-"+p2(new Date(l.movedAt).getMonth()+1)+"-"+p2(new Date(l.movedAt).getDate())+" "+p2(new Date(l.movedAt).getHours())+":"+p2(new Date(l.movedAt).getMinutes())):"",l.moves||""].map(csvCell).join(","));
   });
   return {text:"﻿"+lines.join("\r\n")+"\r\n", n:lines.length-1};
 }
