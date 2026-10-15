@@ -10480,7 +10480,7 @@ function buildExport(){
   const lines = [head.map(csvCell).join(",")];
   OWNERS.forEach(o=>{
     const l = CHK[o.club]; if(!l) return;
-    let d = "", t = "";
+    let d = o.baseDate||"", t = o.baseTime||"";
     if(l.arrivedAt){ const x = new Date(l.arrivedAt); d = x.getFullYear()+"-"+p2(x.getMonth()+1)+"-"+p2(x.getDate()); t = p2(x.getHours())+":"+p2(x.getMinutes()); }
     lines.push([o.club,o.m1,o.l1,o.m2,o.l2,d,t,l.site||"",l.tablet||$("tabletName").value.trim(),LABEL,l.prevSite||"",l.movedAt?(new Date(l.movedAt).getFullYear()+"-"+p2(new Date(l.movedAt).getMonth()+1)+"-"+p2(new Date(l.movedAt).getDate())+" "+p2(new Date(l.movedAt).getHours())+":"+p2(new Date(l.movedAt).getMinutes())):"",l.moves||""].map(csvCell).join(","));
   });
