@@ -46,7 +46,8 @@ button:disabled{opacity:.5;cursor:default}
 .prompt{font-size:1rem;color:var(--muted);margin:0}
 .badges{display:flex;gap:6px;flex-wrap:wrap}
 .badge{font-size:.78rem;font-weight:800;letter-spacing:.03em;padding:3px 9px;border-radius:6px;border:1.5px solid var(--line);color:var(--ink)}
-.badge.toc{border-color:var(--red);color:var(--red)}
+.flags{display:flex;flex-wrap:wrap;gap:10px 28px;align-items:center;font-size:1.15rem;font-weight:600}
+.flags .ans{color:var(--red);font-weight:800;border:2px solid var(--red);border-radius:6px;padding:2px 12px;margin-left:6px}
 .badge.ada{background:var(--warn-bg);color:var(--warn);border-color:transparent}
 .badge.note{background:var(--bad-bg);color:var(--bad);border-color:transparent}
 .step{display:flex;gap:12px;align-items:center;padding:12px 14px;border-radius:8px;background:var(--paper);border:1px solid var(--line)}
@@ -10249,7 +10250,7 @@ function jget(k,d){ try{ const v = sget(k); return v ? JSON.parse(v) : d; }catch
 // ---------- owner list ----------
 let OWNERS = [], BYCLUB = {}, LABEL = "";
 function rowToOwner(r){
-  return {club:r[0], status:(r[1]||"").toUpperCase(), m1:r[2], l1:r[3], m2:r[4], l2:r[5], paid:r[6]||"", ada:r[7]||"", special:r[8]||"", preSite:r[9]||"", team:r[10]||"", baseDate:r[11]||"", baseTime:r[12]||"", baseSite:r[13]||""};
+  return {club:r[0], status:(r[1]||"").toUpperCase(), m1:r[2], l1:r[3], m2:r[4], l2:r[5], paid:r[6]||"", ada:r[7]||"", special:r[8]||"", preSite:r[9]||"", team:r[10]||"", baseDate:r[11]||"", baseTime:r[12]||"", baseSite:r[13]||"", first:r[14]||""};
 }
 function setList(rows,label){
   OWNERS = rows.map(rowToOwner).sort((a,b)=> (a.l1+a.m1).localeCompare(b.l1+b.m1));
@@ -10293,10 +10294,12 @@ function search(q){
     return t.every(w=>parts.some(p=>p.startsWith(w)));
   });
 }
+function yn(v){ v = String(v==null?"":v).trim(); if(/^y/i.test(v)) return "Yes"; if(/^n/i.test(v)) return "No"; return v || "?"; }
+function flagsRow(o){
+  return '<div class="flags"><span>Handicapped? <b class="ans">'+esc(yn(o.ada))+'</b></span><span>First Time Attendee <b class="ans">'+esc(yn(o.first))+'</b></span></div>';
+}
 function badges(o){
   let h = "";
-  if(o.status==="TOC") h += '<span class="badge toc">TOC</span>';
-  if(/^y/i.test(o.ada)) h += '<span class="badge ada">ADA parking</span>';
   if(o.special) h += '<span class="badge note">Special instructions</span>';
   if(o.preSite) h += '<span class="badge">Pre-assigned '+esc(o.preSite)+'</span>';
   return h ? '<div class="badges">'+h+'</div>' : "";
@@ -10325,7 +10328,7 @@ function showRecord(){
   const box = $("result");
   if(!current || !BYCLUB[current]){ box.hidden = true; return; }
   const o = BYCLUB[current], e = eff(o), q = $("q").value.trim(), canBack = q && !/^\d+$/.test(q);
-  let h = '<div class="who"><div class="club">Club # '+o.club+(o.paid?' &middot; '+esc(o.paid):'')+'</div><p class="names">'+esc(names(o))+'</p></div>'+badges(o);
+  let h = '<div class="who"><div class="club">Club # '+o.club+(o.paid?' &middot; '+esc(o.paid):'')+'</div><p class="names">'+esc(names(o))+'</p></div>'+flagsRow(o)+badges(o);
   if(!ATTENDING[o.status]) h += '<div class="msg bad">Status is '+esc(STATUS_TEXT[o.status]||o.status||"unknown")+'. This owner may not be registered for the rally. Check with the Rally Admin before checking in.</div>';
   if(o.special) h += '<div class="msg bad">'+esc(o.special)+'</div>';
   h += '<p class="prompt">Check the name above against the label in the coach window, or ask the owner.</p>';
@@ -10428,6 +10431,7 @@ function mapHeaders(hdr){
     m2l: find(h=>h.startsWith("m2")&&h.includes("last name")),
     paid: find(h=>h.includes("paid")&&h.includes("arrival")),
     ada: find(h=>h.startsWith("ada")),
+    first: find(h=>h.includes("first time")),
     special: find(h=>h.startsWith("special")),
     pre: find(h=>h.includes("pre assigned")||h.includes("pre-assigned")),
     team: find(h=>h.startsWith("parking")),
@@ -10448,7 +10452,7 @@ function importCSV(text, name, modified){
     const club = g(r,"club").replace(/\D/g,"");
     if(!club || !g(r,"m1l")){ skipped++; continue; }
     if(seen[club]){ dup++; continue; } seen[club]=1;
-    rows.push([club, g(r,"status"), g(r,"m1f"), g(r,"m1l"), g(r,"m2f"), g(r,"m2l"), g(r,"paid"), g(r,"ada"), g(r,"special"), g(r,"pre"), g(r,"team"), g(r,"arrDate"), g(r,"arrTime"), g(r,"site")]);
+    rows.push([club, g(r,"status"), g(r,"m1f"), g(r,"m1l"), g(r,"m2f"), g(r,"m2l"), g(r,"paid"), g(r,"ada"), g(r,"special"), g(r,"pre"), g(r,"team"), g(r,"arrDate"), g(r,"arrTime"), g(r,"site"), g(r,"first")]);
   }
   if(!rows.length) throw new Error("No usable owner rows were found.");
   const label = name + (modified ? ", "+new Date(modified).toLocaleString(undefined,{month:"numeric",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit"}) : "");
